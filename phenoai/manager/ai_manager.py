@@ -40,7 +40,7 @@ class AIManager:
         X_std = (X - train_data_min) / (train_data_max - train_data_min)
         X_scaled = X_std * (self.model_parameters['feature_range'][1] - (self.model_parameters['feature_range'][0])) + (self.model_parameters['feature_range'][0])
         src = torch.from_numpy(X_scaled).float()
-        src = src[~torch.any(src.isnan(), dim=1)]
+        src = src[~torch.any(src.isnan(), dim=1)] # Filter out NaN values
         self.last_prediciton = self.model.run_inference(src.unsqueeze(0), device)
 
     def get_inference_result(self, year: int):
@@ -68,7 +68,6 @@ class AIManager:
             delta = timedelta(days=int(index))
             phase_change_dates.append(base_date + delta)
         return phase_change_dates
-        
     
 
 def ai_manager():

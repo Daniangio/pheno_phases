@@ -1,4 +1,5 @@
 import os
+from phenoai.models.base_model import BaseModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -209,12 +210,33 @@ class Decoder(nn.Module):
         return self.norm(x)
 
 
-class TransformerLSTM(nn.Module):
-    def __init__(self, version, input_features, output_features, d_model=32, N=2, heads=1, max_seq_len=366, **kwargs):
+class LSTM(nn.Module):
+    def __init__(self, input_size, hidden_layer_size=100, num_layers=2, output_size=3):
         super().__init__()
-        self.version = version
-        self.input_features = input_features
-        self.output_features = output_features
+        self.hidden_layer_size = hidden_layer_size
+        
+        self.num_layers = num_layers
+
+        self.lstm = nn.LSTM(input_size, hidden_layer_size, num_layers=num_layers)
+
+        self.linear = nn.Linear(hidden_layer_size, output_size)
+
+        self.hidden_cell = (torch.zeros(num_layers, 1, self.hidden_layer_size),
+                            torch.zeros(num_layers, 1, self.hidden_layer_size))
+    
+    def reset_hidden_state(self, device):
+        self.hidden_cell = (torch.zeros(self.num_layers, 1, self.hidden_layer_size).to(device),
+                            torch.zeros(self.num_layers, 1, self.hidden_layer_size).to(device))
+
+    def forward(self, input_seq):
+        lstm_out, self.hidden_cell = self.lstm(input_seq.view(len(input_seq) ,1, -1), self.hidden_cell)
+        predictions = torch.sigmoid(self.linear(lstm_out.view(len(input_seq), -1)))
+        return predictions
+
+
+class TransformerLSTM(BaseModel):
+    def __init__(self, version, input_features, output_features, d_model=32, N=2, heads=1, max_seq_len=366, **kwargs):
+        super().__init__(version, input_features, output_features)
         self.max_seq_len = max_seq_len
         self.encoder = Encoder(len(input_features), d_model, N, heads, max_seq_len)
         self.decoder = LSTM(input_size=d_model, output_size=len(output_features))
@@ -245,27 +267,3 @@ class TransformerLSTM(nn.Module):
         np_mask = Variable(torch.from_numpy(np.ones((1, size, size)).astype('uint8')) == 1).to(device)
         src_mask = src_mask & src_mask.transpose(1,2) & np_mask
         return src_mask[:1, ...]
-
-
-class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_layer_size=100, num_layers=2, output_size=3):
-        super().__init__()
-        self.hidden_layer_size = hidden_layer_size
-        
-        self.num_layers = num_layers
-
-        self.lstm = nn.LSTM(input_size, hidden_layer_size, num_layers=num_layers)
-
-        self.linear = nn.Linear(hidden_layer_size, output_size)
-
-        self.hidden_cell = (torch.zeros(num_layers, 1, self.hidden_layer_size),
-                            torch.zeros(num_layers, 1, self.hidden_layer_size))
-    
-    def reset_hidden_state(self, device):
-        self.hidden_cell = (torch.zeros(self.num_layers, 1, self.hidden_layer_size).to(device),
-                            torch.zeros(self.num_layers, 1, self.hidden_layer_size).to(device))
-
-    def forward(self, input_seq):
-        lstm_out, self.hidden_cell = self.lstm(input_seq.view(len(input_seq) ,1, -1), self.hidden_cell)
-        predictions = torch.sigmoid(self.linear(lstm_out.view(len(input_seq), -1)))
-        return predictions

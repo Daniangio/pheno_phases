@@ -35,8 +35,8 @@
             "max_seq_len": 366,
             "d_model": 36,
             "N": 3,
-            "train_data_min": [-1.40972222, -5.16666667, 0.76],
-            "train_data_max": [30.38472222, 24.22, 39.24],
+            "train_data_min": [-1.146875, -4.74, 1.545],
+            "train_data_max": [33.328125, 25.77, 43.275],
             "feature_range": [-1, 1]
         },
         "transformer_lstm|symington_ataide|touriga_franca": {
@@ -46,8 +46,8 @@
             "max_seq_len": 366,
             "d_model": 36,
             "N": 3,
-            "train_data_min": [-1.40972222, -5.16666667, 0.76],
-            "train_data_max": [30.38472222, 24.22, 39.24],
+            "train_data_min": [-1.26145833, -4.695, -0.035],
+            "train_data_max": [33.24895833, 25.77, 42.345],
             "feature_range": [-1, 1]
         },
         "transformer_lstm|torres|agrolab": {

@@ -1,5 +1,5 @@
 import logging
-from phenoai.api import data
+from phenoai.api import data, inference
 import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -66,6 +66,7 @@ def register_routers(app: FastAPI):
     :type app: FastAPI
     """
     app.include_router(data.router, tags=["data"])
+    app.include_router(inference.router, tags=["inference"])
 
 
 def update_upload_schema(app: FastAPI, function: Callable, name: str) -> None:

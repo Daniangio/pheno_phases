@@ -14,7 +14,7 @@ import json
 logger = logging.getLogger()
 
 
-def get_places_info(place: Optional[str] = None):
+def get_places_info(place: Optional[str] = None, variety: Optional[str] = None):
     result = {'places': []}
     with open(VITIGEOSS_CONFIG_FILE) as f:
         config = json.loads(f.read())
@@ -25,11 +25,17 @@ def get_places_info(place: Optional[str] = None):
         places = [place]
 
     for _place in places:
-        result['places'].append({
+        place_info = {
             'name': _place,
             'weather-station': config['place_to_station'][_place],
             'varieties': config['place_to_varieties'][_place]
-        })
+        }
+        if variety and variety not in place_info['varieties']:
+            continue
+        result['places'].append(place_info)
+
+    if variety and len(result['places']) == 0:
+        raise HTTPException(status_code=404, detail=f'Variety {variety} not found')
     return result
 
 
@@ -45,7 +51,10 @@ def get_pheno_phases_csv_path(place: str, variety: str):
 
 
 def get_input_data_df(place: str, variety: str, year: int, dpm: DataPersistanceManager):
-    return dpm.load_df(place=place, variety=variety, year=year, force_new=False, fail_if_not_found=True).fillna(0.0)
+    try:
+        return dpm.load_df(place=place, variety=variety, year=year, force_new=False, fail_if_not_found=True).fillna(0.0)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f'Input data not found for place {place}, variety {variety} and year {year}')
 
 
 def update_input_data_df(place: str, variety: str, year: int, force_new: bool,
@@ -60,13 +69,3 @@ def update_input_data_df(place: str, variety: str, year: int, force_new: bool,
     df = df.combine_first(update_df)
     dpm.save_df(df)
     return df.fillna(0.0)
-
-
-def run_inference(place: str, variety: str, year: int, dpm: DataPersistanceManager, aim: AIManager):
-    try:
-        input_df = dpm.load_df(place=place, variety=variety, year=year, force_new=False, fail_if_not_found=True)
-        aim.load_model(ModelsEnum.TRANSFORMER_LSTM, place=place, variety=variety)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    aim.run_inference(input_df, device='cpu')
-    return aim.get_inference_result(year=year)
