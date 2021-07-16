@@ -1,0 +1,17 @@
+version: "3"
+
+volumes:
+    data:
+
+services:
+    webserver:
+        build:
+            context: .
+            dockerfile: containers/webserver/Dockerfile
+            args:
+                - TARGET=${BUILD_TARGET}
+        image: phenoai/webserver:${BUILD_TARGET}
+        env_file: .env
+        command: webserver
+        volumes:
+            - data:/mnt/data

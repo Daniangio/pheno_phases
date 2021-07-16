@@ -1,0 +1,8 @@
+alembic==1.6.5
+fastapi>=0.63.0
+pandas
+pydantic==1.8.2
+python-dotenv==0.17.1
+requests
+torch>=1.8.0
+uvicorn>=0.13.0
