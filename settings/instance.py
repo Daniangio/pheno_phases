@@ -12,6 +12,7 @@ class ProjectSettings(BaseSettings):
     build_target: str
     api_title: str = "VITIGEOSS AI API"
     api_description: str = ""
+    app_secret: str = 'notusedyet'
 
     app_log_level: str = "info"
     app_log_format: str = "[%(asctime)s] %(levelname)s - %(name)s: %(message)s"
@@ -35,8 +36,11 @@ class ProjectSettings(BaseSettings):
         extended_data_features = [item for sublist in [[ft, f'{ft}_min', f'{ft}_max',] for ft in self.input_data_features] for item in sublist]
         return extended_data_features + self.input_data_phases + [self.input_data_source]
     
-    def get_vitigeoss_api_sensor_endpoint(self, station: str):
-        return f'sensor/station/{station}/summary'
+    def get_vitigeoss_api_station_endpoint(self, station: str):
+        return f'sensor/stations/{station}/'
+    
+    def get_vitigeoss_api_sensor_endpoint(self, sensor_id: str):
+        return f'sensor/sensors/{sensor_id}/'
     
     def get_api_auth_credentials(self):
         return {

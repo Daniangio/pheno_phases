@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.put("/inference/{place}/{variety}/{year}",
             status_code=200,
-            tags=["data"])
+            tags=["inference"])
 def run_inference(place: str, variety: str, year: int,
                   dpm: DataPersistanceManager = Depends(data_persistance_manager),
                   aim: AIManager = Depends(ai_manager)):

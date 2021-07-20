@@ -19,7 +19,7 @@ execute() {
     OldEnv=$(readlink .env)
     ln -sf env/$Target.env .env
     # set project name variable
-    ProjectName="importer-$Target"
+    ProjectName="phenoai-$Target"
     ProjectName=${ProjectName%"-prod"}
     # execute docker-compose commands
     echo "Executing action '$Action' for target: $BUILD_TARGET"
@@ -78,6 +78,24 @@ cmd_down() {
     execute down $Target $@
 }
 
+cmd_test() {
+    # save old env path and link new one
+    OldEnv=$(readlink .env)
+    ln -sf env/test.env .env
+    # execute docker-compose test commands, renewing volumes and exiting on webserver completion
+    docker-compose -p phenoai-test \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml up \
+        --build --abort-on-container-exit --exit-code-from webserver
+    # tear everything down, including anonymous volumes
+    docker-compose -p phenoai-test \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml down -v
+    # reset old env once done
+    echo "Restoring environment $OldEnv..."
+    ln -sf $OldEnv .env
+}
+
 subcommand=$1
 case ${subcommand} in
 "" | "-h" | "--help")
@@ -86,11 +104,14 @@ case ${subcommand} in
 *)
     shift
     cmd_${subcommand} $@
-    echo "Done!"
-    if [[ $? == 127 ]]; then
+    Return=$?
+    if [ Return = 127 ]; then
         echo "Error: '$subcommand' is not a known subcommand." >&2
         echo "       Run '$(basename $0) --help' for a list of known subcommands." >&2
         exit 1
+    fi
+    if [ Return = 0 ]; then
+        echo "Done!"
     fi
     ;;
 esac

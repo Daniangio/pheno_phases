@@ -20,7 +20,9 @@ RUN pip install -e .
 
 # copy the .env file
 COPY env/$TARGET.env ./.env
+
 COPY model_weights/ /mnt/model_weights
+COPY tests/ /tests
 
 RUN mkdir /mnt/data
 RUN mkdir /mnt/data/pheno_phases

@@ -1,7 +1,5 @@
 import logging
 import os
-from phenoai.models import ModelsEnum
-from phenoai.manager.ai_manager import AIManager
 from phenoai.manager.weather_station_manager import WeatherStationManager
 from phenoai.manager.data_persistance_manager import DataPersistanceManager
 from typing import Optional
