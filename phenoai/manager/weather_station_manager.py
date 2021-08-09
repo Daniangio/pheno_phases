@@ -116,6 +116,8 @@ class WeatherStationManager:
         pheno_phases_df = None
         update_df = self.organize_weather_station_data(weather_station_data_df, pheno_phases_df)
         update_df = self.feature_engineering(update_df)
+        update_df = self.manually_fix_df_errors(update_df, place, dateStart.year)
+        update_df = update_df.interpolate(limit_direction='both')
         return update_df
     
     def organize_weather_station_data(self, weather_station_data_df: pd.DataFrame, pheno_phases_df: pd.DataFrame):
@@ -126,10 +128,23 @@ class WeatherStationManager:
         transformed_station_data_df = pd.concat(dataframes, axis=1)
         transformed_station_data_df.index.name = 'datetime'
         transformed_station_data_df = transformed_station_data_df.sort_index()
-        transformed_station_data_df = transformed_station_data_df.interpolate()
         transformed_station_data_df.index = pd.to_datetime(transformed_station_data_df.index)
         # transformed_station_data_df = add_phenological_phases_one_hot(transformed_station_data_df, phases_df)
         return transformed_station_data_df
+    
+    def manually_fix_df_errors(self, df: pd.DataFrame, place: str, year: int):
+        if place == 'mastroberardino':
+            correct_wsdata = pd.read_csv('/mnt/extra/data/WEATHERSTATIONDATA_MIRABELLA_1974-2020.csv', sep=',', error_bad_lines=False, index_col=0)
+            correct_wsdata.columns = ['temp', 'temp_min', 'temp_max', 'humidity', 'humidity_min', 'humidity_max', 'ppt', 'vvm2', 'rad24h']
+            correct_wsdata.index = pd.to_datetime(correct_wsdata.index)
+            correct_wsdata = correct_wsdata.sort_index()
+            correct_wsdata = correct_wsdata[correct_wsdata.index >= datetime(year,1,1)]
+            correct_wsdata = correct_wsdata[correct_wsdata.index < datetime(year + 1,1,1)]
+            cols = df.columns
+            df = df.combine_first(correct_wsdata)
+            df = df[cols]
+        return df
+
 
     @staticmethod
     def transform_df(df: pd.DataFrame):

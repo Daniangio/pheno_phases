@@ -22,6 +22,7 @@ RUN pip install -e .
 COPY env/$TARGET.env ./.env
 
 COPY model_weights/ /mnt/model_weights
+COPY extra/ /mnt/extra
 COPY tests/ /tests
 
 RUN mkdir /mnt/data

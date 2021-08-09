@@ -6,11 +6,11 @@ execute() {
     Action=$1
     Target=$2
     shift 2
-    if [[ -z $Action ]]; then
+    if [ -z $Action ]; then
         echo "Action is missing: check 'help' for more info"
         return 1
     fi
-    if [[ -z $Target ]]; then
+    if [ -z $Target ]; then
         echo "Target is missing: please specify one of [dev|prod]"
         return 1
     fi

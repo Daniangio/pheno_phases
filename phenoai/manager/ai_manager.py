@@ -27,7 +27,7 @@ class AIManager:
         self.model, self.model_parameters = ModelsEnum.make(model_enum, place=place, variety=variety)
         path = self.model.get_weights_path(root='/mnt/model_weights', place=place, variety=variety)
         if os.path.exists(path):
-            self.model.load_state_dict(torch.load(path, map_location=torch.device('cpu')), strict=False)
+            self.model.load_state_dict(torch.load(path, map_location=torch.device('cpu')), strict=True)
         else:
             raise FileNotFoundError(f'Model weights file {path} for model {model_enum.name} not found!')
     

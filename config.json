@@ -1,11 +1,13 @@
 {
     "places": [
         "symington_ataide",
-        "torres"
+        "torres",
+        "mastroberardino"
     ],
     "place_to_station": {
         "symington_ataide": "vilarica",
-        "torres": "les-borges-blances"
+        "torres": "les-borges-blances",
+        "mastroberardino": "mirabella"
     },
     "place_to_varieties": {
         "symington_ataide": [
@@ -14,6 +16,9 @@
         ],
         "torres": [
             "agrolab"
+        ],
+        "mastroberardino": [
+            "aglianico"
         ]
     },
     "place_variety_to_models": {
@@ -25,6 +30,9 @@
         ],
         "torres|agrolab": [
             "transformer_lstm|torres|agrolab"
+        ],
+        "mastroberardino|aglianico": [
+            "transformer_lstm|mastroberardino|aglianico"
         ]
     },
     "model_to_parameters": {
@@ -35,6 +43,7 @@
             "max_seq_len": 366,
             "d_model": 36,
             "N": 3,
+            "heads": 6,
             "train_data_min": [-1.146875, -4.74, 1.545],
             "train_data_max": [33.328125, 25.77, 43.275],
             "feature_range": [-1, 1]
@@ -46,6 +55,7 @@
             "max_seq_len": 366,
             "d_model": 36,
             "N": 3,
+            "heads": 6,
             "train_data_min": [-1.26145833, -4.695, -0.035],
             "train_data_max": [33.24895833, 25.77, 42.345],
             "feature_range": [-1, 1]
@@ -57,8 +67,21 @@
             "max_seq_len": 366,
             "d_model": 36,
             "N": 3,
+            "heads": 6,
             "train_data_min": [-1.6375, -6.50666667, 0.76],
             "train_data_max": [30.38472222, 24.22, 39.24],
+            "feature_range": [-1, 1]
+        },
+        "transformer_lstm|mastroberardino|aglianico": {
+            "version":"v1",
+            "input_features": ["temp", "temp_min", "temp_max"],
+            "output_features": ["budBreak", "flowering", "fruitSet", "veraison", "harvest"],
+            "max_seq_len": 366,
+            "d_model": 36,
+            "N": 3,
+            "heads": 6,
+            "train_data_min": [-4.59333333, -7.3, -4.59333333],
+            "train_data_max": [29.86666667, 29.12333333, 37.48],
             "feature_range": [-1, 1]
         }
     }

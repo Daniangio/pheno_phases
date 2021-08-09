@@ -1,3 +1,4 @@
+import logging
 import os
 from phenoai.models.base_model import BaseModel
 import torch
@@ -8,10 +9,13 @@ import math
 import copy
 import numpy as np
 
+logger = logging.getLogger()
+
 class Embedder(nn.Module):
     def __init__(self, vocab_size, d_model):
         super().__init__()
         self.embed = nn.Linear(vocab_size, d_model) # nn.Embedding(vocab_size, d_model)
+    
     def forward(self, x):
         return self.embed(x)
 
@@ -78,9 +82,9 @@ class MultiHeadAttention(nn.Module):
         # concatenate heads and put through final linear layer
         concat = scores.transpose(1,2).contiguous().view(bs, -1, self.d_model)
         
-        output = self.out(concat)
+        # output = self.out(concat)
     
-        return output
+        return concat
     
     def attention(self, q, k, v, d_k, mask=None, dropout=None):
         scores = torch.matmul(q, k.transpose(-2, -1)) /  math.sqrt(d_k)
@@ -90,7 +94,6 @@ class MultiHeadAttention(nn.Module):
             #print('ATTENTION MASK', mask)
             scores = scores.masked_fill(mask == 0, -1e9)
         scores = F.softmax(scores, dim=-1)
-        #print('ATTENTION MASK', scores[0, 0, :, :])
     
         if dropout is not None:
             scores = dropout(scores)
@@ -142,8 +145,8 @@ class EncoderLayer(nn.Module):
         x2 = self.norm_1(x)
         x = x + self.dropout_1(self.attn(x2,x2,x2,mask))
         x2 = self.norm_2(x)
-        x = x + self.dropout_2(self.ff(x2))
-        return x
+        # x = x + self.dropout_2(self.ff(x2))
+        return x2
     
 # build a decoder layer with two multi-head attention layers and
 # one feed-forward layer
@@ -168,8 +171,8 @@ class DecoderLayer(nn.Module):
         x2 = self.norm_2(x)
         x = x + self.dropout_2(self.attn_2(x2, e_outputs, e_outputs, src_mask))
         x2 = self.norm_3(x)
-        x = x + self.dropout_3(self.ff(x2))
-        return x
+        # x = x + self.dropout_3(self.ff(x2))
+        return x2
     
 # We can then build a convenient cloning function that can generate multiple layers:
 def get_clones(module, N):
@@ -262,8 +265,21 @@ class TransformerLSTM(BaseModel):
     
     @staticmethod
     def create_masks(src, device, pad=-2): # Magheggione dell' and bit a bit
-        src_mask = (src != pad).unsqueeze(-2).to(device)
-        size = src.size(1) # get seq_len for matrix
-        np_mask = Variable(torch.from_numpy(np.ones((1, size, size)).astype('uint8')) == 1).to(device)
-        src_mask = src_mask & src_mask.transpose(1,2) & np_mask
+        #src_mask = (src != pad).unsqueeze(-2).to(device)
+        #size = src.size(1) # get seq_len for matrix
+        #np_mask = Variable(torch.from_numpy(np.ones((1, size, size)).astype('uint8')) == 1).to(device)
+        #src_mask = src_mask & src_mask.transpose(1,2) & np_mask
+        if src is not None:
+            src_mask = (src != pad).unsqueeze(-2)
+            size = src.size(1) # get seq_len for matrix
+            np_mask = nopeak_mask(size).to(device)
+            src_mask = src_mask & src_mask.transpose(1,2) & np_mask
+            src_mask[0, :, 0] = True
+        else:
+            src_mask = None
         return src_mask[:1, ...]
+
+def nopeak_mask(size):
+        np_mask = np.triu(np.ones((1, size, size)), k=1).astype('uint8') # k=-30 rende il modello "cieco" al valore dell'output degli ultimi 30 valori (giorni)
+        np_mask =  Variable(torch.from_numpy(np_mask) == 0)
+        return np_mask
