@@ -15,7 +15,7 @@
             "touriga_franca"
         ],
         "torres": [
-            "agrolab"
+            "syrah"
         ],
         "mastroberardino": [
             "aglianico"
@@ -28,8 +28,8 @@
         "symington_ataide|touriga_franca": [
             "transformer_lstm|symington_ataide|touriga_franca"
         ],
-        "torres|agrolab": [
-            "transformer_lstm|torres|agrolab"
+        "torres|syrah": [
+            "transformer_lstm|torres|syrah"
         ],
         "mastroberardino|aglianico": [
             "transformer_lstm|mastroberardino|aglianico"
@@ -60,7 +60,7 @@
             "train_data_max": [33.24895833, 25.77, 42.345],
             "feature_range": [-1, 1]
         },
-        "transformer_lstm|torres|agrolab": {
+        "transformer_lstm|torres|syrah": {
             "version":"v1",
             "input_features": ["temp", "temp_min", "temp_max"],
             "output_features": ["budBreak", "flowering", "fruitSet", "veraison", "harvest"],

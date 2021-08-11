@@ -22,7 +22,7 @@ def test_get_places_info(test_client: TestClient):
 
 @pytest.mark.dependency(depends=["test_get_places_info"])
 def test_get_input_data_wrong_place(test_client: TestClient):
-    wrong_place, variety, year = 'notaplace', 'agrolab', 2020
+    wrong_place, variety, year = 'notaplace', 'syrah', 2020
     url = f'/data/input/{wrong_place}/{variety}/{year}'
     response = test_client.get(url)
     assert response.status_code == 404
@@ -38,7 +38,7 @@ def test_get_input_data_wrong_variety(test_client: TestClient):
 
 @pytest.mark.dependency(depends=["test_get_input_data_wrong_variety"])
 def test_get_input_data_not_created_yet(test_client: TestClient):
-    place, variety, year = 'torres', 'agrolab', 2020
+    place, variety, year = 'torres', 'syrah', 2020
     url = f'/data/input/{place}/{variety}/{year}'
     response = test_client.get(url)
     assert response.status_code == 404
@@ -46,7 +46,7 @@ def test_get_input_data_not_created_yet(test_client: TestClient):
 
 @pytest.mark.dependency(depends=["test_get_input_data_not_created_yet"])
 def test_update_input_data_create_new(test_client: TestClient):
-    place, variety, year = 'torres', 'agrolab', 2019
+    place, variety, year = 'torres', 'syrah', 2019
     url = f'/data/input/{place}/{variety}/{year}'
     response = test_client.put(url)
     assert response.status_code == 201
