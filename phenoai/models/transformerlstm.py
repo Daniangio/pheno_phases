@@ -41,7 +41,7 @@ class PositionalEncoder(nn.Module):
     def forward(self, x, device):
         # make embeddings relatively larger
         x = x * math.sqrt(self.d_model)
-        #add constant to embedding
+        # add constant to embedding
         seq_len = x.size(1)
         x = x + Variable(self.pe[:,:seq_len], requires_grad=False).to(device)
         return x
