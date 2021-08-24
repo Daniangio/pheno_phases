@@ -50,7 +50,7 @@ def get_pheno_phases_csv_path(place: str, variety: str):
 
 def get_input_data_df(place: str, variety: str, year: int, dpm: DataPersistanceManager):
     try:
-        return dpm.load_df(place=place, variety=variety, year=year, force_new=False, fail_if_not_found=True).fillna(0.0)
+        return dpm.load_df(place=place, variety=variety, year=year, force_new=False, fail_if_not_found=True).fillna(0.0)  # Use df.fillna(0.0) to avoid problems with NaN values on Swagger
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f'Input data not found for place {place}, variety {variety} and year {year}')
 
@@ -60,10 +60,10 @@ def update_input_data_df(place: str, variety: str, year: int, force_new: bool,
     df = dpm.load_df(place=place, variety=variety, year=year, force_new=force_new)
     weather_station_missing_rows = df[df[settings.input_data_source] != 'WS']
     if weather_station_missing_rows.empty:
-        return df.fillna(0.0)
+        return df.fillna(0.0) # Use df.fillna(0.0) to avoid problems with NaN values on Swagger
     update_df = wsm.get_wsdata_df(place, weather_station_missing_rows)
     if update_df is None:
-        return df.fillna(0.0)
-    df = df.combine_first(update_df)
+        return df.fillna(0.0) # Use df.fillna(0.0) to avoid problems with NaN values on Swagger
+    df = df.combine_first(update_df) # Update NaN values of the df with values of the update_df
     dpm.save_df(df)
-    return df.fillna(0.0)
+    return df.fillna(0.0) # Use df.fillna(0.0) to avoid problems with NaN values on Swagger

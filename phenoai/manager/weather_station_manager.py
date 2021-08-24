@@ -27,13 +27,27 @@ def get_bearerAuth(credentials: dict):
 
 
 class WeatherStationDriver:
+    """
+    Driver class in charge of interfacing with the Vitigeoss APIs to retrieve data coming from the sensors of
+    the weather stations
+    """
     def __init__(self) -> None:
+        """ Configure the endpoints to be called using settings """
         self.api_base_url = settings.vitigeoss_api_base_url
         self.station_endpoint = settings.get_vitigeoss_api_station_endpoint
         self.sensor_endpoint = settings.get_vitigeoss_api_sensor_endpoint
         self.sensor_name_id_dict = None
 
     def register_station_sensor_ids(self, station: str, type_keys: list, bearerAuth: BearerAuth=get_bearerAuth(settings.get_api_auth_credentials())):
+        """
+        Retrieve the list of sensors available at the specified station and filter them by their typeKey.
+        Save the filtered sensors ids in a dictionary, where the key is the corresponding typeKey
+
+        :param station: string containing the name of the weather station whose sensors are to be listed
+        :param type_keys: List of type keys that identify the type of sensor, e.g. ['temp', 'radiation']
+        :param bearerAuth: authentication token for the API service
+        :return: None - The class attribute "sensor_name_id_dict" is initialized
+        """
         station_url = os.path.join(self.api_base_url, self.station_endpoint(station))
         response = requests.get(station_url, auth=bearerAuth)
         data = response.json()
@@ -46,6 +60,12 @@ class WeatherStationDriver:
                 self.sensor_name_id_dict[sensor['typeKey']] = sensor['_id']
     
     def get_sensor_data(self, dateStart: str, dateEnd: str, bearerAuth: BearerAuth=get_bearerAuth(settings.get_api_auth_credentials())):
+        """
+        For each type of sensor saved in the class attribute "sensor_name_id_dict" by the "register_station_sensor_ids()" method,
+        request to the Vitigeoss APIs the sensor data of the period between the dateStart and dateEnd dates
+
+        :returns: list of dictionaries, one for each sensor
+        """
         if self.sensor_name_id_dict is None:
             raise Exception(f'Sensor ids not registered!')
         sensors = []
@@ -61,7 +81,8 @@ class WeatherStationDriver:
         return sensors
     
     @staticmethod
-    def get_df_from_sensor_data(sensors: list): # Organize sensor data in a dataframe
+    def get_df_from_sensor_data(sensors: list):
+        """ Support method to organize the messy data coming from sensors in a single and good looking dataframe """
         Measurement = make_dataclass("Measurement", [("datetime", str), ("typeKey", str), ("measure", float)])
         measurements_list = []
         for sensor in sensors:
@@ -74,6 +95,11 @@ class WeatherStationDriver:
 
 
 class MockedWeatherStationDriver(WeatherStationDriver):
+    """
+    Mocked version of the WeatherStationDriver, used for testing purposes.
+    Instead of calling the external APIs to retrieve weather station data,
+    it reads a mocked sample from a json file and returns its content
+    """
     def __init__(self) -> None:
         super().__init__()
     
@@ -93,6 +119,10 @@ class WeatherStationManager:
         self.driver = driver
 
     def get_wsdata_df(self, place, weather_station_missing_rows, chunk_days=366):
+        """
+        Retrieve weather data from weather station sensors of the specified place.
+        This method only requests the data of the dates whose data are missing (not the data of the entire year).
+        """
         if weather_station_missing_rows.empty:
             raise Exception('The Dataframe to be updated is empty!')
         self.driver.register_station_sensor_ids(station=self.config['place_to_station'][place], type_keys=self.input_data_features)
@@ -117,10 +147,14 @@ class WeatherStationManager:
         update_df = self.organize_weather_station_data(weather_station_data_df, pheno_phases_df)
         update_df = self.feature_engineering(update_df)
         update_df = self.manually_fix_df_errors(update_df, place, dateStart.year)
-        update_df = update_df.interpolate(limit_direction='both')
+        update_df = update_df.interpolate(limit_direction='both') # Interpolate to fill missing data values
         return update_df
     
     def organize_weather_station_data(self, weather_station_data_df: pd.DataFrame, pheno_phases_df: pd.DataFrame):
+        """
+        Process data and obtain a refined version of the pandas DataFrame to be used as input for the inference models.
+        Still some steps have to be taken to obtain the final version of the df.
+        """
         dataframes = []
         for ft in self.input_data_features:
             dataframes.append(self.transform_df(weather_station_data_df[weather_station_data_df['typeKey'] == ft]))
@@ -129,10 +163,48 @@ class WeatherStationManager:
         transformed_station_data_df.index.name = 'datetime'
         transformed_station_data_df = transformed_station_data_df.sort_index()
         transformed_station_data_df.index = pd.to_datetime(transformed_station_data_df.index)
+        # TODO pheno_phases_df are missing, find a way to save and update them
         # transformed_station_data_df = add_phenological_phases_one_hot(transformed_station_data_df, phases_df)
         return transformed_station_data_df
+
+    def add_phenological_phases_one_hot(df: pd.DataFrame, phases_df: pd.DataFrame):
+        # ADD THE PHENOLOGICAL PHASES COLUMNS TO THE DF. FOR EACH PHASE, USE A 1 ON THE DATES OF THAT PHASE, 0 OTHERWISE
+        idx = pd.IndexSlice
+        for index, column in enumerate(phases_df.columns):
+            df[column] = 0
+        for year in phases_df.index:
+            if year != df.index[0].year:
+                continue
+            for index, column in enumerate(phases_df.columns[:-1]):
+                i = index
+                while i < len(phases_df.columns[:-1]):
+                    try:
+                        # set to 1 all dates >= date of the phenological phase begin in the column of that phenological phase
+                        df.loc[idx[phases_df.loc[phases_df.index == year, column].values[0]
+                                :
+                                phases_df.loc[phases_df.index == year, phases_df.columns[i + 1]].values[0]],
+                            idx[column]] = 1
+                        break
+                    except Exception:
+                        i += 1
+                        if i == len(phases_df.columns[:-1]):
+                            try:
+                                df.loc[idx[phases_df.loc[phases_df.index == year, column].values[0]:], idx[column]] = 1
+                            except Exception:
+                                pass
+            # add harvest after veraison
+            column = phases_df.columns[-1]
+            try:
+                df.loc[idx[phases_df.loc[phases_df.index == year, column].values[0]:], idx[column]] = 1
+            except Exception:
+                continue
+        return df
     
     def manually_fix_df_errors(self, df: pd.DataFrame, place: str, year: int):
+        """
+        Hardcoded method used to read MIRABELLA ECLANO weather station data from an external file,
+        since the weather station data coming from sensors have too many gaps
+        """
         if place == 'mastroberardino':
             correct_wsdata = pd.read_csv('/mnt/extra/data/WEATHERSTATIONDATA_MIRABELLA_1974-2020.csv', sep=',', error_bad_lines=False, index_col=0)
             correct_wsdata.columns = ['temp', 'temp_min', 'temp_max', 'humidity', 'humidity_min', 'humidity_max', 'ppt', 'vvm2', 'rad24h']
@@ -157,12 +229,14 @@ class WeatherStationManager:
         df = df_grouped.mean()
         return df
     
-    # Raggruppo i dati giornalmente, traformando ogni feature in 3 diverse features:
-    # - la media dei 5 valori minimi
-    # - la media dei 5 valori massimi
-    # - la somma di tutti i valori misurati nella giornata
     @staticmethod
     def feature_engineering(df: pd.DataFrame):
+        """
+        Raggruppo i dati giornalmente, traformando ogni feature in 3 diverse features:
+        - la media di tutti i valori misurati nella giornata
+        - la media dei 5 valori minimi
+        - la media dei 5 valori massimi
+        """
         daily_grouped_df = df.groupby(pd.Grouper(level='datetime',freq='1D'))
         
         engineered_df = daily_grouped_df.mean()
@@ -177,7 +251,9 @@ class WeatherStationManager:
         engineered_df.loc[engineered_df.fruitSet < 1, 'fruitSet'] = 0
         engineered_df.loc[engineered_df.veraison < 1, 'veraison'] = 0
         engineered_df.loc[engineered_df.harvest < 1, 'harvest'] = 0
-        engineered_df[settings.input_data_source] = 'WS'
+        engineered_df[settings.input_data_source] = 'WS' # Set the source of the data to WS (Weather Station). If a dataframe has some dates
+        # whose source is not WS (for example because they are future dates, or data are missing), a next step will compile those missing data
+        # using data coming from Weather Forecasts
         
         return engineered_df
 
