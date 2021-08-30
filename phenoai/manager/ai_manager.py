@@ -37,18 +37,16 @@ class AIManager:
         X = input_df.loc[:, self.model.input_features].to_numpy()
         train_data_min = np.array(self.model_parameters['train_data_min'])
         train_data_max = np.array(self.model_parameters['train_data_max'])
-        X_std = (X - train_data_min) / (train_data_max - train_data_min)
-        X_scaled = X_std * (self.model_parameters['feature_range'][1] - (self.model_parameters['feature_range'][0])) + (self.model_parameters['feature_range'][0])
+        X_std = (X - train_data_min) / (train_data_max - train_data_min) # Min-Max normalization
+        X_scaled = X_std * (self.model_parameters['feature_range'][1] - (self.model_parameters['feature_range'][0])) + (self.model_parameters['feature_range'][0]) # Scaling
         src = torch.from_numpy(X_scaled).float()
         src = src[~torch.any(src.isnan(), dim=1)] # Filter out NaN values
         self.last_prediciton = self.model.run_inference(src.unsqueeze(0), device)
 
     def get_inference_result(self, year: int):
         prediction_df = pd.DataFrame(self.get_phase_change_dates(self.last_prediciton, year=year), columns=['predicted date'])
-        #actual_df = pd.DataFrame(self.get_phase_change_dates(self.last_prediciton, year=year), columns=['actual date'])
         comparison_df = pd.concat([prediction_df], axis=1)
-        comparison_df.index = pd.Index(self.model.output_features)
-        # comparison_df['error[days]'] = (comparison_df['predicted date'] - comparison_df['actual date']).astype('timedelta64[D]')
+        comparison_df.index = pd.Index(self.model.output_features) # Assign phenological phases to df phases (e.g. BudBreak, FruitSet, ...)
         return comparison_df
     
     # segna il cambio di fase alla prima occorrenza di un valore sopra il threshold per quella fase
